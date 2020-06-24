@@ -72,12 +72,60 @@ export default function update<I>(
     updateTrackers.push(...processUnsatisfiableMixedItemRequestsGroup(productionGroup, itemStorage, timeDelta, debug))
   }
 
-  // TODO: run update capping productionProgress at 1. If it reaches 1, reset it to 0 and store the production results
-  // if the store is full, leave it at 1 until the next tick (and store only the part that fits, reducing the
-  // activeProducers number?)
+  for (const productionUpdate of updateTrackers) {
+    const recipeDuration = productionUpdate.recipeProduction.recipe.productionDuration
+    const currentProgress = productionUpdate.recipeProduction.productionProgress
+    const timeToCompletion = recipeDuration * (1 - currentProgress)
 
-  // TODO: find min remaining delta where > 0, use update() to update productions that have remainig delta > 0, repeat
-  // until done (keep filtering out productions that cannot have the next batch of items provided to them)
+    // work-around for possible rounding errors
+    if (timeToCompletion <= productionUpdate.remainingTimeDelta) {
+      productionUpdate.recipeProduction.productionProgress = 1
+      productionUpdate.remainingTimeDelta -= timeToCompletion
+    } else {
+      productionUpdate.recipeProduction.productionProgress += productionUpdate.remainingTimeDelta / recipeDuration
+      productionUpdate.remainingTimeDelta = 0
+    }
+
+    if (productionUpdate.recipeProduction.productionProgress === 1) {
+      const productionResults = productionUpdate.recipeProduction.recipe.result
+      const producersToDepositResults = Math.min(
+        productionUpdate.recipeProduction.activeProducers,
+        ...productionResults.map(
+          ({item, amount}) => Math.floor(itemStorage.getFreeCapacity(item) / amount),
+        ),
+      )
+      for (const {item, amount} of productionResults) {
+        itemStorage.deposit(item, amount * producersToDepositResults)
+      }
+      productionUpdate.recipeProduction.activeProducers -= producersToDepositResults
+      if (!productionUpdate.recipeProduction.activeProducers) {
+        productionUpdate.recipeProduction.productionProgress = 0
+      }
+    }
+  }
+
+  let productionsToUpdate = updateTrackers.filter(
+    (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
+  )
+  do {
+    const minRemainingTimeDelta = Math.min(
+      ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
+    )
+    update(
+      productionsToUpdate.map((updateTracker) => updateTracker.recipeProduction),
+      itemStorage,
+      minRemainingTimeDelta,
+      debug,
+    )
+    // Note: It is likely that some productions will not be updated (either by not receiving ingredients or not being
+    // able to store the results). This is fine, it just another case when a production can be stalled.
+    for (const updateTracker of productionsToUpdate) {
+      updateTracker.remainingTimeDelta -= minRemainingTimeDelta
+    }
+    productionsToUpdate = productionsToUpdate.filter(
+      (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
+    )
+  } while (productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length)
 }
 
 function processSimpleItemRequests<I>(
