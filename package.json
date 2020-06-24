@@ -3,11 +3,20 @@
   "version": "0.0.0",
   "description": "Production update logic for the OpenFactory video game.",
   "main": "index.js",
+  "private": "true",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Martin Jurča <mjurca@centrum.cz>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jurca/openfactory-production-updater.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jurca/openfactory-production-updater/issues"
+  },
+  "homepage": "https://github.com/jurca/openfactory-production-updater#readme",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^3.3.0",
     "@typescript-eslint/parser": "^3.3.0",
