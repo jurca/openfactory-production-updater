@@ -72,6 +72,33 @@ export default function update<I>(
     updateTrackers.push(...processUnsatisfiableMixedItemRequestsGroup(productionGroup, itemStorage, timeDelta, debug))
   }
 
+  updateProductions(updateTrackers, itemStorage)
+
+  let productionsToUpdate = updateTrackers.filter(
+    (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
+  )
+  do {
+    const minRemainingTimeDelta = Math.min(
+      ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
+    )
+    update(
+      productionsToUpdate.map((updateTracker) => updateTracker.recipeProduction),
+      itemStorage,
+      minRemainingTimeDelta,
+      debug,
+    )
+    // Note: It is likely that some productions will not be updated (either by not receiving ingredients or not being
+    // able to store the results). This is fine, it just another case when a production can be stalled.
+    for (const updateTracker of productionsToUpdate) {
+      updateTracker.remainingTimeDelta -= minRemainingTimeDelta
+    }
+    productionsToUpdate = productionsToUpdate.filter(
+      (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
+    )
+  } while (productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length)
+}
+
+function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[], itemStorage: ItemStorage<I>): void {
   for (const productionUpdate of updateTrackers) {
     const recipeDuration = productionUpdate.recipeProduction.recipe.productionDuration
     const currentProgress = productionUpdate.recipeProduction.productionProgress
@@ -103,29 +130,6 @@ export default function update<I>(
       }
     }
   }
-
-  let productionsToUpdate = updateTrackers.filter(
-    (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
-  )
-  do {
-    const minRemainingTimeDelta = Math.min(
-      ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
-    )
-    update(
-      productionsToUpdate.map((updateTracker) => updateTracker.recipeProduction),
-      itemStorage,
-      minRemainingTimeDelta,
-      debug,
-    )
-    // Note: It is likely that some productions will not be updated (either by not receiving ingredients or not being
-    // able to store the results). This is fine, it just another case when a production can be stalled.
-    for (const updateTracker of productionsToUpdate) {
-      updateTracker.remainingTimeDelta -= minRemainingTimeDelta
-    }
-    productionsToUpdate = productionsToUpdate.filter(
-      (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
-    )
-  } while (productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length)
 }
 
 function processSimpleItemRequests<I>(
