@@ -42,7 +42,7 @@ export function collectItemRequests<I>(
           }
           requestedItems.set(ingredient.item, itemRequest)
         }
-        
+
         const requestedAmount = ingredient.amount * maxSafeProducers
         itemRequest.productions.push({
           production,

@@ -52,7 +52,7 @@ export default function update<I>(
     simpleItemRequests,
     satisfiableMixedRequests,
   )
-  
+
   const updateTrackers: RecipeProductionUpdateTracker<I>[] = []
   for (const production of productions) {
     if (production.productionProgress || !production.recipe.ingredients.length) {
@@ -62,7 +62,7 @@ export default function update<I>(
       })
     }
   }
-  
+
   updateTrackers.push(...processSimpleItemRequests(simpleItemRequests, itemStorage, timeDelta, debug))
   updateTrackers.push(...processSatisfiableMixedItemRequests(satisfiableMixedRequests, itemStorage, timeDelta, debug))
 
