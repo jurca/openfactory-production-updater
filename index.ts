@@ -160,7 +160,7 @@ function processSimpleItemRequests<I>(
         throw new Error(
           'Encountered an invalid simple item request - expected a single production requesting a single item of the ' +
           `same amount (${productions[0].requestedAmount}) as the total requested amount in the item request ` +
-          `(${totalRequestedAmount})`
+          `(${totalRequestedAmount})`,
         )
       }
     }
@@ -238,7 +238,7 @@ function processUnsatisfiableMixedItemRequestsGroup<I>(
   const updateTrackers: RecipeProductionUpdateTracker<I>[] = []
 
   const ratio = Math.min(...Array.from(unsatisfiableMixedRequestsGroup).map(
-    ([item, request]) => itemStorage.getStoredAmount(item) / request.totalRequestedAmount
+    ([item, request]) => itemStorage.getStoredAmount(item) / request.totalRequestedAmount,
   ))
 
   const productions = new Map<RecipeProduction<I>, {producersToActivate: number}>()
@@ -255,7 +255,7 @@ function processUnsatisfiableMixedItemRequestsGroup<I>(
         if (availableAmount !== amount * producersToActivate) {
           throw new Error(
             'Encountered an invalid unsatisfiable item request production group, requested ' +
-            `${amount * producersToActivate} from storage, but the storage only had ${availableAmount}`
+            `${amount * producersToActivate} from storage, but the storage only had ${availableAmount}`,
           )
         }
       }

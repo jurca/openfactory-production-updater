@@ -117,7 +117,7 @@ export function getGroupedUnsatisfiableMixedItemRequests<I>(
   const unsatisfiableMixedRequests = new Map<I, ItemRequest<I>>(
     Array
       .from(allItemRequests)
-      .filter(([item]) => !simpleItemRequests.has(item) && !satisfiableMixedItemRequests.has(item))
+      .filter(([item]) => !simpleItemRequests.has(item) && !satisfiableMixedItemRequests.has(item)),
   )
 
   const groupedRequests = new Set<Map<I, ItemRequest<I>>>()
