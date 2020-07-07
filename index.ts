@@ -15,7 +15,7 @@ export interface Recipe<I> {
     readonly item: I
     readonly amount: number
   }>
-  readonly productionDuration: number // milliseconds
+  readonly productionDuration: number // Can be any time unit the integrating code uses, e.g. millisecond, tick, ...
 }
 
 export interface RecipeProduction<I> {
@@ -40,7 +40,7 @@ export interface ItemStorage<I> {
 export default function update<I>(
   productions: Iterable<RecipeProduction<I>>,
   itemStorage: ItemStorage<I>,
-  timeDelta: number,
+  timeDelta: number, // Can be any time unit the integrating code uses, e.g. millisecond, tick, ...
   debug = false,
 ): void {
   // Collect the current item requests so that the available items can be provided as evenly as possible
