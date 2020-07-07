@@ -6,7 +6,7 @@ import {
   ItemRequest,
 } from './itemRequestCollector.js'
 
-interface Recipe<I> {
+export interface Recipe<I> {
   readonly ingredients: ReadonlyArray<{
     readonly item: I
     readonly amount: number
