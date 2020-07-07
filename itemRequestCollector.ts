@@ -1,4 +1,4 @@
-import {ItemStorage, RecipeProduction} from './index'
+import {ItemStorage, RecipeProduction} from './index.js'
 
 export interface ItemRequest<I> {
   readonly productions: {
