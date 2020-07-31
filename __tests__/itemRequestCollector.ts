@@ -1,10 +1,41 @@
-import {ItemStorage, Recipe, RecipeProduction} from '../index'
+import {Recipe, RecipeProduction} from '../index'
 import {collectItemRequests} from '../itemRequestCollector'
+import ItemStorageImpl, {ItemStorage} from '../ItemStorage'
+import StrictItemStorage from '../StrictItemStorage'
 import {Item, RECIPES} from './data/data'
 
 describe('itemRequestCollector', () => {
   type ResettableItemStorage<I> = ItemStorage<I> & {
     reset(): void
+  }
+
+  class TestItemStorage<I> extends StrictItemStorage<I> implements ResettableItemStorage<I> {
+    constructor(
+      private readonly initialSettings: ReadonlyMap<I, readonly [number, number]>,
+    ) {
+      super(new ItemStorageImpl(new Map(Array.from(initialSettings).map(([item, [, capacity]]) => [item, capacity]))))
+      for (const [item, [amount, capacity]] of initialSettings) {
+        if (amount > capacity) {
+          throw new Error(
+            `The ${item} is set to invalid amount of ${amount} which is greater than the specified capacity of ` +
+            capacity,
+          )
+        }
+        this.deposit(item, amount)
+      }
+    }
+
+    public reset(): void {
+      for (const item of this.itemCapacitySettings.keys()) {
+        const storedAmount = this.getStoredAmount(item)
+        if (storedAmount) {
+          this.withdraw(item, storedAmount)
+        }
+      }
+      for (const [item, [amount]] of this.initialSettings) {
+        this.deposit(item, amount)
+      }
+    }
   }
 
   const itemStorage: ResettableItemStorage<Item> = createItemStorage(new Map([
@@ -101,61 +132,7 @@ describe('itemRequestCollector', () => {
   })
 
   function createItemStorage<I>(initialSettings: ReadonlyMap<I, readonly [number, number]>): ResettableItemStorage<I> {
-    for (const [item, [amount, capacity]] of initialSettings) {
-      if (amount > capacity) {
-        throw new Error(
-          `The ${item} is set to invalid amount of ${amount} which is greater than the specified capacity of ` +
-          capacity,
-        )
-      }
-      if (amount < 0) {
-        throw new Error(
-          `The amount of ${item} is set to ${amount}, which is invalid, expected a non-negative number`,
-        )
-      }
-      if (capacity < 0) {
-        throw new Error(
-          `The capacity of ${item} is set to ${capacity}, which is invalid, expected a non-negative number`,
-        )
-      }
-    }
-
-    const currentContents = new Map(Array.from(initialSettings).map(([item, [amount]]) => [item, amount]))
-
-    return {
-      deposit(item: I, amount: number): void {
-        if (amount > this.getFreeCapacity(item)) {
-          throw new Error(
-            `Cannot store ${amount} amount of ${item}, there is only ${this.getFreeCapacity(item)} free capacity for ` +
-            'the item',
-          )
-        }
-        currentContents.set(item, this.getStoredAmount(item) + amount)
-      },
-      getFreeCapacity(item: I): number {
-        return Math.max((initialSettings.get(item)?.[1] ?? 0) - this.getStoredAmount(item), 0)
-      },
-      getStoredAmount(item: I): number {
-        return currentContents.get(item) || 0
-      },
-      withdraw(item: I, amount: number): number {
-        if (amount > this.getStoredAmount(item)) {
-          throw new Error(
-            `Unable to withdraw ${amount} of ${item}, there is only ${this.getStoredAmount(item)} of the item in ` +
-            'the storage',
-          )
-        }
-
-        currentContents.set(item, this.getStoredAmount(item) - amount)
-        return amount
-      },
-      reset(): void {
-        currentContents.clear()
-        for (const [item, [amount]] of initialSettings) {
-          currentContents.set(item, amount)
-        }
-      },
-    }
+    return new TestItemStorage(initialSettings)
   }
 
   function makeProduction<I>(recipe: Recipe<I>, totalProducers: number): RecipeProduction<I> {

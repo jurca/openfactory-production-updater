@@ -5,6 +5,7 @@ import {
   getSimpleItemRequests,
   ItemRequest,
 } from './itemRequestCollector.js'
+import {ItemStorage} from './ItemStorage.js'
 
 export interface Recipe<I> {
   readonly ingredients: ReadonlyArray<{
@@ -28,13 +29,6 @@ export interface RecipeProduction<I> {
 interface RecipeProductionUpdateTracker<I> {
   recipeProduction: RecipeProduction<I>
   remainingTimeDelta: number
-}
-
-export interface ItemStorage<I> {
-  getStoredAmount(item: I): number
-  getFreeCapacity(item: I): number
-  withdraw(item: I, amount: number): number
-  deposit(item: I, amount: number): void
 }
 
 export default function update<I>(
