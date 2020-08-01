@@ -10,9 +10,9 @@ export default class ItemStorageImpl<I> implements ItemStorage<I> {
   private readonly storedAmounts: Map<I, number> = new Map()
 
   constructor(
-    protected readonly itemCapacitySettingsStorage: ReadonlyMap<I, number>,
+    public readonly itemCapacitySettings: ReadonlyMap<I, number>,
   ) {
-    for (const [item, capacity] of itemCapacitySettingsStorage) {
+    for (const [item, capacity] of itemCapacitySettings) {
       if (capacity < 0) {
         throw new RangeError(
           `Each configured item capacity must be a non-negative number, but ${capacity} was provided for ${item}`,
@@ -23,16 +23,12 @@ export default class ItemStorageImpl<I> implements ItemStorage<I> {
     }
   }
 
-  get itemCapacitySettings(): ReadonlyMap<I, number> {
-    return this.itemCapacitySettingsStorage
-  }
-
   public getStoredAmount(item: I): number {
-    return this.storedAmounts.get(item) || 0
+    return Math.min(this.storedAmounts.get(item) || 0, this.itemCapacitySettings.get(item) || 0)
   }
 
   public getFreeCapacity(item: I): number {
-    return Math.max((this.itemCapacitySettingsStorage.get(item) || 0) - this.getStoredAmount(item), 0)
+    return Math.max((this.itemCapacitySettings.get(item) || 0) - this.getStoredAmount(item), 0)
   }
 
   public withdraw(item: I, amount: number): number {
