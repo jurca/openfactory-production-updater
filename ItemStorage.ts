@@ -24,11 +24,11 @@ export default class ItemStorageImpl<I> implements ItemStorage<I> {
   }
 
   public getStoredAmount(item: I): number {
-    return Math.min(this.storedAmounts.get(item) || 0, this.itemCapacitySettings.get(item) || 0)
+    return Math.min(this.storedAmounts.get(item) || 0, this.getCapacity(item))
   }
 
   public getFreeCapacity(item: I): number {
-    return Math.max((this.itemCapacitySettings.get(item) || 0) - this.getStoredAmount(item), 0)
+    return Math.max(this.getCapacity(item) - this.getStoredAmount(item), 0)
   }
 
   public withdraw(item: I, amount: number): number {
@@ -51,5 +51,9 @@ export default class ItemStorageImpl<I> implements ItemStorage<I> {
     const depositedAmount = Math.min(amount, freeCapacity)
     this.storedAmounts.set(item, this.getStoredAmount(item) + depositedAmount)
     return depositedAmount
+  }
+
+  private getCapacity(item: I): number {
+    return this.itemCapacitySettings.get(item) || 0
   }
 }
