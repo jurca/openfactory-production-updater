@@ -16,10 +16,16 @@ export default class StrictItemStorage<I> implements ItemStorage<I> {
   }
 
   public getStoredAmount(item: I): number {
+    if (!this.wrappedStorage.itemCapacitySettings.has(item)) {
+      throw new Error(`Unknown item: ${item}`)
+    }
     return this.wrappedStorage.getStoredAmount(item)
   }
 
   public getFreeCapacity(item: I): number {
+    if (!this.wrappedStorage.itemCapacitySettings.has(item)) {
+      throw new Error(`Unknown item: ${item}`)
+    }
     return this.wrappedStorage.getFreeCapacity(item)
   }
 
@@ -33,6 +39,9 @@ export default class StrictItemStorage<I> implements ItemStorage<I> {
         `storage, but ${amount} was requested`,
       )
     }
+    if (!this.wrappedStorage.itemCapacitySettings.has(item)) {
+      throw new Error(`Unknown item: ${item}`)
+    }
     return this.wrappedStorage.withdraw(item, amount)
   }
 
@@ -45,6 +54,9 @@ export default class StrictItemStorage<I> implements ItemStorage<I> {
         `Unsatisfiable request: there is only ${this.getFreeCapacity(item)} free capacity for the ${item} item, but ` +
         `${amount} was requested`,
       )
+    }
+    if (!this.wrappedStorage.itemCapacitySettings.has(item)) {
+      throw new Error(`Unknown item: ${item}`)
     }
     return this.wrappedStorage.deposit(item, amount)
   }

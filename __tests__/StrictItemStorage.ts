@@ -85,5 +85,25 @@ describe('StrictItemStorage', () => {
     expect(storage.getFreeCapacity(1)).toBe(2)
   })
 
-  // TODO: it throws error from every method for unknown items
+  it('throws an error if querying stored amount of an unknown item', () => {
+    const storage = new StrictItemStorage(new ItemStorageImpl(new Map([[1, 1]])))
+    expect(() => storage.getStoredAmount(2)).toThrowError(Error)
+  })
+
+  it('throws an error if querying free capacity of an unknown item', () => {
+    const storage = new StrictItemStorage(new ItemStorageImpl(new Map([[1, 1]])))
+    expect(() => storage.getFreeCapacity(2)).toThrowError(Error)
+  })
+
+  it('throws an error if withdrawing any amount of an unknown item', () => {
+    const storage = new StrictItemStorage(new ItemStorageImpl(new Map([[1, 1]])))
+    spyOn(storage, 'getStoredAmount').and.callFake(() => 1) // bypass stored amount check
+    expect(() => storage.withdraw(2, 1)).toThrowError(Error)
+  })
+
+  it('throws an error if depositing any amount of an unknown item', () => {
+    const storage = new StrictItemStorage(new ItemStorageImpl(new Map([[1, 1]])))
+    spyOn(storage, 'getFreeCapacity').and.callFake(() => 1) // bypass free capacity check
+    expect(() => storage.deposit(2, 1)).toThrowError(Error)
+  })
 })
