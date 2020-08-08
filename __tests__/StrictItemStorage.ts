@@ -1,5 +1,5 @@
-import ItemStorageImpl from '../ItemStorage'
-import StrictItemStorage from '../StrictItemStorage'
+import ItemStorageImpl from '../ItemStorage.js'
+import StrictItemStorage from '../StrictItemStorage.js'
 
 describe('StrictItemStorage', () => {
   it('rejects item capacities that are not safe integers', () => {

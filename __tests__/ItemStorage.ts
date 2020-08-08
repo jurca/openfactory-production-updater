@@ -1,4 +1,4 @@
-import ItemStorageImpl from '../ItemStorage'
+import ItemStorageImpl from '../ItemStorage.js'
 
 describe('ItemStorageImpl', () => {
   it('provides read-only access to the item capacity configuring map', () => {

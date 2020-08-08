@@ -27,6 +27,7 @@
     "babel-jest": "^26.1.0",
     "eslint": "^7.3.0",
     "jest": "^26.1.0",
+    "jest-ts-webcompat-resolver": "^1.0.0",
     "typescript": "^3.9.5"
   }
 }

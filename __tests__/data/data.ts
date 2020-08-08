@@ -1,4 +1,4 @@
-import {Recipe} from '../../index'
+import {Recipe} from '../../index.js'
 
 export enum Item {
   TREE_TRUNK = 'Item.TREE_TRUNK',

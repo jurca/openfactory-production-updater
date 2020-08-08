@@ -1,8 +1,8 @@
-import {Recipe, RecipeProduction} from '../index'
-import {collectItemRequests} from '../itemRequestCollector'
-import ItemStorageImpl, {ItemStorage} from '../ItemStorage'
-import StrictItemStorage from '../StrictItemStorage'
-import {Item, RECIPES} from './data/data'
+import {Recipe, RecipeProduction} from '../index.js'
+import {collectItemRequests} from '../itemRequestCollector.js'
+import ItemStorageImpl, {ItemStorage} from '../ItemStorage.js'
+import StrictItemStorage from '../StrictItemStorage.js'
+import {Item, RECIPES} from './data/data.js'
 
 describe('itemRequestCollector', () => {
   type ResettableItemStorage<I> = ItemStorage<I> & {
