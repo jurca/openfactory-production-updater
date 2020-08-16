@@ -23,7 +23,7 @@ export interface RecipeProduction<I> {
   readonly recipe: Recipe<I>
   readonly totalProducers: number // number of producers configured to execute this recipe
   activeProducers: number // number of producers that obtained the ingredients and are producing
-  productionProgress: number // 0 to 1. all producers share the progress to keep things simple(r)
+  productionProgress: number // 0 to recipe.productionDuration. all producers share the progress to keep things simple
 }
 
 interface RecipeProductionUpdateTracker<I> {
@@ -68,9 +68,10 @@ export default function update<I>(
 
   updateProductions(updateTrackers, itemStorage)
 
-  let productionsToUpdate = updateTrackers.filter(
-    (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
-  )
+  let productionsToUpdate = updateTrackers.filter(({recipeProduction, remainingTimeDelta}) => (
+    remainingTimeDelta ||
+    recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
+  ))
   do {
     const minRemainingTimeDelta = Math.min(
       ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
@@ -86,28 +87,23 @@ export default function update<I>(
     for (const updateTracker of productionsToUpdate) {
       updateTracker.remainingTimeDelta -= minRemainingTimeDelta
     }
-    productionsToUpdate = productionsToUpdate.filter(
-      (updateTracker) => updateTracker.remainingTimeDelta || updateTracker.recipeProduction.productionProgress === 1,
-    )
+    productionsToUpdate = productionsToUpdate.filter(({recipeProduction, remainingTimeDelta}) => (
+      remainingTimeDelta ||
+      recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
+    ))
   } while (productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length)
 }
 
 function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[], itemStorage: ItemStorage<I>): void {
   for (const productionUpdate of updateTrackers) {
     const recipeDuration = productionUpdate.recipeProduction.recipe.productionDuration
-    const currentProgress = productionUpdate.recipeProduction.productionProgress
-    const timeToCompletion = recipeDuration * (1 - currentProgress)
+    const timeToCompletion = recipeDuration - productionUpdate.recipeProduction.productionProgress
 
-    // work-around for possible rounding errors
-    if (timeToCompletion <= productionUpdate.remainingTimeDelta) {
-      productionUpdate.recipeProduction.productionProgress = 1
-      productionUpdate.remainingTimeDelta -= timeToCompletion
-    } else {
-      productionUpdate.recipeProduction.productionProgress += productionUpdate.remainingTimeDelta / recipeDuration
-      productionUpdate.remainingTimeDelta = 0
-    }
+    const timeDeltaToApply = Math.min(productionUpdate.remainingTimeDelta, timeToCompletion)
+    productionUpdate.recipeProduction.productionProgress += timeDeltaToApply
+    productionUpdate.remainingTimeDelta -= timeDeltaToApply
 
-    if (productionUpdate.recipeProduction.productionProgress === 1) {
+    if (productionUpdate.recipeProduction.productionProgress === recipeDuration) {
       const productionResults = productionUpdate.recipeProduction.recipe.result
       const producersToDepositResults = Math.min(
         productionUpdate.recipeProduction.activeProducers,
