@@ -82,7 +82,7 @@ export default function update<I>(
       debug,
     )
     // Note: It is likely that some productions will not be updated (either by not receiving ingredients or not being
-    // able to store the results). This is fine, it just another case when a production can be stalled.
+    // able to store the results). This is fine, it's just another case when a production can be stalled.
     for (const updateTracker of productionsToUpdate) {
       updateTracker.remainingTimeDelta -= minRemainingTimeDelta
     }
