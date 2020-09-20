@@ -125,6 +125,32 @@ describe('itemRequestCollector', () => {
       const requests = collectItemRequests([makeProduction(RECIPES.TABLE, 128)], itemStorage)
       expect(requests.size).toBe(0)
     })
+
+    it('skips productions that are already in progress', () => {
+      const productions = {
+        processTreeTrunk: makeProduction(RECIPES.PROCESS_TREE_TRUNK, 128),
+        woodenNail: makeProduction(RECIPES.WOODEN_NAIL, 128),
+      }
+      productions.processTreeTrunk.productionProgress = 1
+      const requests = collectItemRequests([productions.processTreeTrunk, productions.woodenNail], itemStorage)
+      expect(requests.size).toBe(1)
+      expect(requests.keys().next().value).toBe(Item.WOOD_PLANK)
+      expect(requests.values().next().value?.productions.length).toBe(1)
+      expect(requests.values().next().value?.productions[0].production).toBe(productions.woodenNail)
+    })
+
+    it('skips productions that would not be able to store their results', () => {
+      const productions = {
+        processTreeTrunk: makeProduction(RECIPES.PROCESS_TREE_TRUNK, 128),
+        woodenNail: makeProduction(RECIPES.WOODEN_NAIL, 128),
+      }
+      itemStorage.deposit(Item.WOODEN_NAIL, itemStorage.getFreeCapacity(Item.WOODEN_NAIL))
+      const requests = collectItemRequests([productions.processTreeTrunk, productions.woodenNail], itemStorage)
+      expect(requests.size).toBe(1)
+      expect(requests.keys().next().value).toBe(Item.TREE_TRUNK)
+      expect(requests.values().next().value?.productions.length).toBe(1)
+      expect(requests.values().next().value?.productions[0].production).toBe(productions.processTreeTrunk)
+    })
   })
 
   afterEach(() => {
