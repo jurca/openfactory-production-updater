@@ -72,7 +72,7 @@ export default function update<I>(
     remainingTimeDelta ||
     recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
   ))
-  do {
+  while (productionsToUpdate.length) {
     const minRemainingTimeDelta = Math.min(
       ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
     )
@@ -91,7 +91,12 @@ export default function update<I>(
       remainingTimeDelta ||
       recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
     ))
-  } while (productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length)
+    if (!productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length) {
+      break
+    }
+  }
+
+  updateProductions(productionsToUpdate, itemStorage) // Give output-stalled productions one last chance
 }
 
 function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[], itemStorage: ItemStorage<I>): void {
