@@ -1,4 +1,4 @@
-import {RecipeProduction} from './index.js'
+import {RecipeProduction} from './productionUpdater.js'
 import {ItemStorage} from './ItemStorage.js'
 
 export interface ItemRequest<I> {

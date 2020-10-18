@@ -1,4 +1,4 @@
-import {Recipe, RecipeProduction} from '../index.js'
+import {Recipe, RecipeProduction} from '../productionUpdater.js'
 import {collectItemRequests} from '../itemRequestCollector.js'
 import ItemStorageImpl, {ItemStorage} from '../ItemStorage.js'
 import StrictItemStorage from '../StrictItemStorage.js'

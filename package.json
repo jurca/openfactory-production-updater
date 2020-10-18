@@ -2,7 +2,7 @@
   "name": "@jurca/openfactory-production-updater",
   "version": "0.0.0",
   "description": "Production update logic for the OpenFactory video game.",
-  "main": "index.js",
+  "main": "productionUpdater.js",
   "type": "module",
   "private": "true",
   "scripts": {
