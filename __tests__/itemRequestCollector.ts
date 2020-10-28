@@ -1,5 +1,10 @@
 import {Recipe, RecipeProduction} from '../productionUpdater.js'
-import {collectItemRequests} from '../itemRequestCollector.js'
+import {
+  collectItemRequests,
+  getGroupedUnsatisfiableMixedItemRequests,
+  getSatisfiableMixedItemRequests,
+  getSimpleItemRequests,
+} from '../itemRequestCollector.js'
 import ItemStorageImpl, {ItemStorage} from '../ItemStorage.js'
 import StrictItemStorage from '../StrictItemStorage.js'
 import {Item, RECIPES} from './data/data.js'
@@ -186,6 +191,75 @@ describe('itemRequestCollector', () => {
           expect(simpleRequests.get(ingredient.item)?.productions[0].production).toBe(production)
         }
       }
+    })
+  })
+
+  describe('getSatisfiableMixedItemRequests', () => {
+    const productions = {
+      treeHarvest: makeProduction(RECIPES.TREE_HARVEST, 1),
+      processTreeTrunk: makeProduction(RECIPES.PROCESS_TREE_TRUNK, 1),
+      woodenNail: makeProduction(RECIPES.WOODEN_NAIL, 1),
+      table: makeProduction(RECIPES.TABLE, 1),
+      water: makeProduction(RECIPES.WATER, 1),
+    }
+
+    it('does not include item request for items requested by multiple productions, but are not satisfiable', () => {
+      const requests = collectItemRequests(Object.values(productions), itemStorage)
+      const simpleRequests = getSimpleItemRequests(requests)
+      const mixedRequests = getSatisfiableMixedItemRequests(requests, simpleRequests, itemStorage)
+      expect(mixedRequests.size).toBe(0)
+    })
+
+    it('returns item requests for items requested by multiple productions, but are satisfiable', () => {
+      itemStorage.deposit(Item.WOOD_PLANK, 1) // to enable both wooden nail and table being made
+      const requests = collectItemRequests(Object.values(productions), itemStorage)
+      const simpleRequests = getSimpleItemRequests(requests)
+      const mixedRequests = getSatisfiableMixedItemRequests(requests, simpleRequests, itemStorage)
+      expect(mixedRequests.size).toBe(3)
+      expect(mixedRequests.has(Item.WOOD_PLANK)).toBe(true)
+      expect(mixedRequests.has(Item.WOODEN_NAIL)).toBe(true)
+      expect(mixedRequests.has(Item.TREE_BARK)).toBe(true)
+      expect(mixedRequests.get(Item.WOOD_PLANK)?.totalRequestedAmount).toBe(
+        RECIPES.WOODEN_NAIL.ingredients[0].amount + RECIPES.TABLE.ingredients[0].amount,
+      )
+      expect(mixedRequests.get(Item.WOOD_PLANK)?.productions.length).toBe(2)
+      const woodenNailProductionRequest = mixedRequests.get(Item.WOOD_PLANK)?.productions.find(
+        productionRequest => productionRequest.production === productions.woodenNail,
+      )
+      const tableProductionRequest = mixedRequests.get(Item.WOOD_PLANK)?.productions.find(
+        productionRequest => productionRequest.production === productions.table,
+      )
+      expect(woodenNailProductionRequest?.requestedProducers).toBe(1)
+      expect(woodenNailProductionRequest?.requestedAmount).toBe(RECIPES.WOODEN_NAIL.ingredients[0].amount)
+      expect(tableProductionRequest?.requestedProducers).toBe(1)
+      expect(tableProductionRequest?.requestedAmount).toBe(RECIPES.TABLE.ingredients[0].amount)
+    })
+  })
+
+  describe('getGroupedUnsatisfiableMixedItemRequests', () => {
+    const productions = {
+      treeHarvest: makeProduction(RECIPES.TREE_HARVEST, 1),
+      processTreeTrunk: makeProduction(RECIPES.PROCESS_TREE_TRUNK, 1),
+      woodenNail: makeProduction(RECIPES.WOODEN_NAIL, 1),
+      table: makeProduction(RECIPES.TABLE, 1),
+      water: makeProduction(RECIPES.WATER, 1),
+    }
+    const requests = collectItemRequests(Object.values(productions), itemStorage)
+    const simpleRequests = getSimpleItemRequests(requests)
+    const mixedRequests = getSatisfiableMixedItemRequests(requests, simpleRequests, itemStorage)
+    const unsatisfiableRequests = getGroupedUnsatisfiableMixedItemRequests(requests, simpleRequests, mixedRequests)
+
+    it('returns groups of unsatisfiable mixed requests', () => {
+      expect(unsatisfiableRequests.size).toBe(1)
+      const [groupRequests] = [...unsatisfiableRequests.values()]
+      expect(groupRequests.size).toBe(3)
+      expect(groupRequests.has(Item.WOOD_PLANK)).toBe(true)
+      expect(groupRequests.has(Item.WOODEN_NAIL)).toBe(true)
+      expect(groupRequests.has(Item.TREE_BARK)).toBe(true)
+      expect(groupRequests.get(Item.WOOD_PLANK)?.totalRequestedAmount).toBe(
+        RECIPES.WOODEN_NAIL.ingredients[0].amount + RECIPES.TABLE.ingredients[0].amount,
+      )
+      expect(groupRequests.get(Item.WOOD_PLANK)?.productions.length).toBe(2)
     })
   })
 
