@@ -6,9 +6,12 @@ export enum Item {
   WOOD_PLANK = 'Item.WOOD_PLANK',
   WOODEN_NAIL = 'Item.WOODEN_NAIL',
   TABLE = 'Item.TABLE',
+  HYDROGEN = 'Item.HYDROGEN',
+  OXYGEN = 'Item.OXYGEN',
+  WATER = 'Item.WATER',
 }
 
-type RecipeType = 'TREE_HARVEST' | 'PROCESS_TREE_TRUNK' | 'WOODEN_NAIL' | 'TABLE'
+type RecipeType = 'TREE_HARVEST' | 'PROCESS_TREE_TRUNK' | 'WOODEN_NAIL' | 'TABLE' | 'WATER'
 
 export const RECIPES: {[key in RecipeType]: Recipe<Item>} = {
   TREE_HARVEST: {
@@ -67,5 +70,22 @@ export const RECIPES: {[key in RecipeType]: Recipe<Item>} = {
       amount: 1,
     }],
     productionDuration: 16,
+  },
+  WATER: {
+    ingredients: [
+      {
+        item: Item.HYDROGEN,
+        amount: 2,
+      },
+      {
+        item: Item.OXYGEN,
+        amount: 1,
+      },
+    ],
+    result: [{
+      item: Item.WATER,
+      amount: 2,
+    }],
+    productionDuration: 1,
   },
 }

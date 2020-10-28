@@ -44,6 +44,9 @@ describe('itemRequestCollector', () => {
     [Item.WOOD_PLANK, [6, 1024]],
     [Item.WOODEN_NAIL, [12, 1024]],
     [Item.TABLE, [1000, 1024]],
+    [Item.HYDROGEN, [1024, 1024]],
+    [Item.OXYGEN, [512, 512]],
+    [Item.WATER, [2, 4096]],
   ]))
 
   describe('collectItemRequests', () => {
@@ -150,6 +153,39 @@ describe('itemRequestCollector', () => {
       expect(requests.keys().next().value).toBe(Item.TREE_TRUNK)
       expect(requests.values().next().value?.productions.length).toBe(1)
       expect(requests.values().next().value?.productions[0].production).toBe(productions.processTreeTrunk)
+    })
+  })
+
+  describe('getSimpleItemRequests', () => {
+    const productions = {
+      treeHarvest: makeProduction(RECIPES.TREE_HARVEST, 128),
+      processTreeTrunk: makeProduction(RECIPES.PROCESS_TREE_TRUNK, 128),
+      woodenNail: makeProduction(RECIPES.WOODEN_NAIL, 128),
+      table: makeProduction(RECIPES.TABLE, 128),
+      water: makeProduction(RECIPES.WATER, 32),
+    }
+    const requests = collectItemRequests(Object.values(productions), itemStorage)
+    const simpleRequests = getSimpleItemRequests(requests)
+
+    it('returns item requests where item is requested by only a single production', () => {
+      expect(simpleRequests.size).toBe(3)
+      expect(simpleRequests.has(Item.TREE_TRUNK)).toBe(true)
+      expect(simpleRequests.has(Item.HYDROGEN)).toBe(true)
+      expect(simpleRequests.has(Item.OXYGEN)).toBe(true)
+      expect(simpleRequests.get(Item.TREE_TRUNK)?.productions.length).toBe(1)
+      expect(simpleRequests.get(Item.HYDROGEN)?.productions.length).toBe(1)
+      expect(simpleRequests.get(Item.OXYGEN)?.productions.length).toBe(1)
+    })
+
+    it('returns item requests where each production requests only items not requested by another production', () => {
+      for (const request of simpleRequests.values()) {
+        const {production} = request.productions[0]
+        const {ingredients} = production.recipe
+        for (const ingredient of ingredients) {
+          expect(simpleRequests.has(ingredient.item)).toBe(true)
+          expect(simpleRequests.get(ingredient.item)?.productions[0].production).toBe(production)
+        }
+      }
     })
   })
 
