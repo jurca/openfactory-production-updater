@@ -11,7 +11,7 @@ export interface ItemRequest<I> {
 }
 
 export function collectItemRequests<I>(
-  productions: Iterable<RecipeProduction<I>>,
+  productions: RecipeProduction<I>[],
   itemStorage: ItemStorage<I>,
 ): Map<I, ItemRequest<I>> {
   const requestedItems = new Map<I, ItemRequest<I>>()
