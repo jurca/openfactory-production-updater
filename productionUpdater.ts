@@ -49,7 +49,14 @@ export default function update<I>(
 
   const updateTrackers: RecipeProductionUpdateTracker<I>[] = []
   for (const production of productions) {
-    if (production.productionProgress || !production.recipe.ingredients.length) {
+    if (!production.activeProducers && !production.recipe.ingredients.length) {
+      const maxUsefulProducers = Math.min(
+        ...production.recipe.result.map(({amount, item}) => Math.floor(itemStorage.getFreeCapacity(item) / amount)),
+      )
+      production.activeProducers = Math.min(maxUsefulProducers, production.totalProducers)
+    }
+
+    if (production.activeProducers) {
       updateTrackers.push({
         recipeProduction: production,
         remainingTimeDelta: timeDelta,
