@@ -44,7 +44,31 @@ describe('production updater', () => {
     expect(treeHarvestProduction?.productionProgress).toBe(1)
   })
 
-  function runProductionUpdate(timeDelta = 1): void {
+  it('stores the result of no-ingredient productions when they complete their cycle', () => {
+    const preCompletionTreeTrunksCount = storage.getStoredAmount(Item.TREE_TRUNK)
+    runProductionUpdate(RECIPES.TREE_HARVEST.productionDuration - 1)
+    expect(storage.getStoredAmount(Item.TREE_TRUNK)).toBe(preCompletionTreeTrunksCount)
+    const activeProducers = productions.get(RECIPES.TREE_HARVEST)?.activeProducers ?? 0
+    expect(activeProducers).toBeGreaterThan(0)
+    expect(activeProducers).toBeLessThanOrEqual(productions.get(RECIPES.TREE_HARVEST)?.totalProducers ?? 0)
+    runProductionUpdate(1)
+    expect(storage.getStoredAmount(Item.TREE_TRUNK)).toBe(
+      preCompletionTreeTrunksCount + RECIPES.TREE_HARVEST.result[0].amount * activeProducers,
+    )
+    expect(productions.get(RECIPES.TREE_HARVEST)?.productionProgress).toBe(0)
+    expect(productions.get(RECIPES.TREE_HARVEST)?.activeProducers).toBe(0)
+  })
+
+  it('continues the production that is already in progress', () => {
+    runProductionUpdate(1)
+    expect(productions.get(RECIPES.TREE_HARVEST)?.productionProgress).toBe(1)
+    runProductionUpdate(1)
+    expect(productions.get(RECIPES.TREE_HARVEST)?.productionProgress).toBe(2)
+    runProductionUpdate(1)
+    expect(productions.get(RECIPES.TREE_HARVEST)?.productionProgress).toBe(3)
+  })
+
+  function runProductionUpdate(timeDelta: number): void {
     updateProduction([...productions.values()], storage, timeDelta, true)
   }
 
