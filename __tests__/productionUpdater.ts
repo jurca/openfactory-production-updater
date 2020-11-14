@@ -77,6 +77,36 @@ describe('production updater', () => {
     expect(production?.activeProducers).toBeGreaterThan(0)
   })
 
+  it('resets the production once its output is stored in the storage in full', () => {
+    const preProductionTrunkCount = storage.getStoredAmount(Item.TREE_TRUNK)
+    const expectedProducers = Math.min(
+      productions.get(RECIPES.TREE_HARVEST)?.totalProducers ?? Infinity,
+      Math.floor(storage.getFreeCapacity(Item.TREE_TRUNK) / RECIPES.TREE_HARVEST.result[0].amount),
+    )
+    runProductionUpdate(RECIPES.TREE_HARVEST.productionDuration)
+    const postProductionTrunkCount = storage.getStoredAmount(Item.TREE_TRUNK)
+    expect(postProductionTrunkCount).toBe(
+      preProductionTrunkCount + RECIPES.TREE_HARVEST.result[0].amount * expectedProducers,
+    )
+    const production = productions.get(RECIPES.TREE_HARVEST)
+    expect(production?.activeProducers).toBe(0)
+    expect(production?.productionProgress).toBe(0)
+  })
+
+  it('handles multi-tick updates by running as many production cycles as can fit', () => {
+    const preProductionTrunkCount = storage.getStoredAmount(Item.TREE_TRUNK)
+    const cycles = 4
+    const expectedProducers = Math.min(
+      productions.get(RECIPES.TREE_HARVEST)?.totalProducers ?? Infinity,
+      Math.floor(storage.getFreeCapacity(Item.TREE_TRUNK) / RECIPES.TREE_HARVEST.result[0].amount),
+    )
+    runProductionUpdate(RECIPES.TREE_HARVEST.productionDuration * cycles + 1)
+    const postProductionTrunkCount = storage.getStoredAmount(Item.TREE_TRUNK)
+    expect(postProductionTrunkCount - preProductionTrunkCount).toBe(
+      RECIPES.TREE_HARVEST.result[0].amount * expectedProducers * cycles,
+    )
+  })
+
   function runProductionUpdate(timeDelta: number): void {
     updateProduction([...productions.values()], storage, timeDelta, true)
   }
