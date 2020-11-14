@@ -79,9 +79,18 @@ export default function update<I>(
     remainingTimeDelta ||
     recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
   ))
-  while (productionsToUpdate.length) {
+  while (
+    productionsToUpdate.length &&
+    // Check there are productions that are not stalled on output, so that simulation can actually progress
+    productionsToUpdate.some(({recipeProduction: {productionProgress, recipe: {productionDuration}}}) =>
+      productionProgress < productionDuration,
+    ) &&
+    productionsToUpdate.some((updateTracker) => updateTracker.remainingTimeDelta)
+  ) {
     const minRemainingTimeDelta = Math.min(
-      ...productionsToUpdate.map((updateTracker) => updateTracker.remainingTimeDelta),
+      ...productionsToUpdate
+        .filter(updateTracker => updateTracker.remainingTimeDelta)
+        .map((updateTracker) => updateTracker.remainingTimeDelta),
     )
     update(
       productionsToUpdate.map((updateTracker) => updateTracker.recipeProduction),
@@ -98,12 +107,10 @@ export default function update<I>(
       remainingTimeDelta ||
       recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
     ))
-    if (!productionsToUpdate.filter((updateTracker) => updateTracker.remainingTimeDelta).length) {
-      break
-    }
   }
 
-  updateProductions(productionsToUpdate, itemStorage) // Give output-stalled productions one last chance
+  // Give output-stalled productions one last chance to store their outputs
+  updateProductions(productionsToUpdate, itemStorage)
 }
 
 function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[], itemStorage: ItemStorage<I>): void {
@@ -123,12 +130,14 @@ function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[]
           ({item, amount}) => Math.floor(itemStorage.getFreeCapacity(item) / amount),
         ),
       )
-      for (const {item, amount} of productionResults) {
-        itemStorage.deposit(item, amount * producersToDepositResults)
-      }
-      productionUpdate.recipeProduction.activeProducers -= producersToDepositResults
-      if (!productionUpdate.recipeProduction.activeProducers) {
-        productionUpdate.recipeProduction.productionProgress = 0
+      if (producersToDepositResults) {
+        for (const {item, amount} of productionResults) {
+          itemStorage.deposit(item, amount * producersToDepositResults)
+        }
+        productionUpdate.recipeProduction.activeProducers -= producersToDepositResults
+        if (!productionUpdate.recipeProduction.activeProducers) {
+          productionUpdate.recipeProduction.productionProgress = 0
+        }
       }
     }
   }

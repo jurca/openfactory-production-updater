@@ -68,6 +68,15 @@ describe('production updater', () => {
     expect(productions.get(RECIPES.TREE_HARVEST)?.productionProgress).toBe(3)
   })
 
+  it('keeps the production stalled on output if the storage is full, but stores as much as it can', () => {
+    runProductionUpdate(RECIPES.TREE_HARVEST.productionDuration - 1)
+    storage.deposit(Item.TREE_TRUNK, storage.getFreeCapacity(Item.TREE_TRUNK))
+    runProductionUpdate(1)
+    const production = productions.get(RECIPES.TREE_HARVEST)
+    expect(production?.productionProgress).toBe(RECIPES.TREE_HARVEST.productionDuration)
+    expect(production?.activeProducers).toBeGreaterThan(0)
+  })
+
   function runProductionUpdate(timeDelta: number): void {
     updateProduction([...productions.values()], storage, timeDelta, true)
   }
