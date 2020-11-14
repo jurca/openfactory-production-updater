@@ -32,7 +32,7 @@ interface RecipeProductionUpdateTracker<I> {
 }
 
 export default function update<I>(
-  productions: RecipeProduction<I>[],
+  productions: readonly RecipeProduction<I>[],
   itemStorage: ItemStorage<I>,
   timeDelta: number, // Can be any time unit the integrating code uses, e.g. millisecond, tick, ...
   debug = false,

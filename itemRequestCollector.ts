@@ -2,7 +2,7 @@ import {RecipeProduction} from './productionUpdater.js'
 import {ItemStorage} from './ItemStorage.js'
 
 export interface ItemRequest<I> {
-  readonly productions: {
+  readonly productions: readonly {
     readonly production: RecipeProduction<I>
     readonly requestedAmount: number
     readonly requestedProducers: number
@@ -11,7 +11,7 @@ export interface ItemRequest<I> {
 }
 
 export function collectItemRequests<I>(
-  productions: RecipeProduction<I>[],
+  productions: readonly RecipeProduction<I>[],
   itemStorage: ItemStorage<I>,
 ): Map<I, ItemRequest<I>> {
   const requestedItems = new Map<I, ItemRequest<I>>()
