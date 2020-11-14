@@ -7,6 +7,8 @@ import {
 } from './itemRequestCollector.js'
 import {ItemStorage} from './ItemStorage.js'
 
+const SIMULATION_STEP_DURATION = 1
+
 export interface Recipe<I> {
   readonly ingredients: ReadonlyArray<{
     readonly item: I
@@ -36,96 +38,66 @@ export default function update<I>(
   itemStorage: ItemStorage<I>,
   timeDelta: number, // Can be any time unit the integrating code uses, e.g. millisecond, tick, ...
   debug = false,
-): void {
-  // Collect the current item requests so that the available items can be provided as evenly as possible
-  const itemRequests = collectItemRequests(productions, itemStorage)
-  const simpleItemRequests = getSimpleItemRequests(itemRequests)
-  const satisfiableMixedRequests = getSatisfiableMixedItemRequests(itemRequests, simpleItemRequests, itemStorage)
-  const groupedUnsatisfiableMixedItemRequests = getGroupedUnsatisfiableMixedItemRequests(
-    itemRequests,
-    simpleItemRequests,
-    satisfiableMixedRequests,
-  )
-
-  const updateTrackers: RecipeProductionUpdateTracker<I>[] = []
-  for (const production of productions) {
-    if (!production.activeProducers && !production.recipe.ingredients.length) {
-      const maxUsefulProducers = Math.min(
-        ...production.recipe.result.map(({amount, item}) => Math.floor(itemStorage.getFreeCapacity(item) / amount)),
-      )
-      production.activeProducers = Math.min(maxUsefulProducers, production.totalProducers)
-    }
-
-    if (production.activeProducers) {
-      updateTrackers.push({
-        recipeProduction: production,
-        remainingTimeDelta: timeDelta,
-      })
+): number {
+  if (debug) {
+    if (timeDelta <= 0 || !Number.isSafeInteger(timeDelta)) {
+      throw new RangeError(`The time delta must be a positive safe integer, ${timeDelta} was provided`)
     }
   }
 
-  updateTrackers.push(...processSimpleItemRequests(simpleItemRequests, itemStorage, timeDelta, debug))
-  updateTrackers.push(...processSatisfiableMixedItemRequests(satisfiableMixedRequests, itemStorage, timeDelta, debug))
+  const timeToSimulate = timeDelta - timeDelta % SIMULATION_STEP_DURATION
+  for (let simulatedTime = 0; simulatedTime < timeToSimulate; simulatedTime += SIMULATION_STEP_DURATION) {
+    // Activate no-input productions that are idle
+    for (const production of productions) {
+      if (!production.activeProducers && !production.recipe.ingredients.length) {
+        const maxUsefulProducers = Math.min(
+          ...production.recipe.result.map(({amount, item}) => Math.floor(itemStorage.getFreeCapacity(item) / amount)),
+        )
+        production.activeProducers = Math.min(maxUsefulProducers, production.totalProducers)
+      }
+    }
 
-  // Unsatisfiable mixed requests are related to productions that use multiple items, but at least one item cannot be
-  // provided in full requested amount to all productions requesting it.
-  for (const productionGroup of groupedUnsatisfiableMixedItemRequests) {
-    updateTrackers.push(...processUnsatisfiableMixedItemRequestsGroup(productionGroup, itemStorage, timeDelta, debug))
-  }
-
-  updateProductions(updateTrackers, itemStorage)
-
-  let productionsToUpdate = updateTrackers.filter(({recipeProduction, remainingTimeDelta}) => (
-    remainingTimeDelta ||
-    recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
-  ))
-  while (
-    productionsToUpdate.length &&
-    // Check there are productions that are not stalled on output, so that simulation can actually progress
-    productionsToUpdate.some(({recipeProduction: {productionProgress, recipe: {productionDuration}}}) =>
-      productionProgress < productionDuration,
-    ) &&
-    productionsToUpdate.some((updateTracker) => updateTracker.remainingTimeDelta)
-  ) {
-    const minRemainingTimeDelta = Math.min(
-      ...productionsToUpdate
-        .filter(updateTracker => updateTracker.remainingTimeDelta)
-        .map((updateTracker) => updateTracker.remainingTimeDelta),
+    // Activate input-requiring productions that are idle
+    const itemRequests = collectItemRequests(productions, itemStorage)
+    const simpleItemRequests = getSimpleItemRequests(itemRequests)
+    processSimpleItemRequests(simpleItemRequests, itemStorage, timeDelta, debug)
+    const satisfiableMixedRequests = getSatisfiableMixedItemRequests(itemRequests, simpleItemRequests, itemStorage)
+    processSatisfiableMixedItemRequests(satisfiableMixedRequests, itemStorage, timeDelta, debug)
+    const groupedUnsatisfiableMixedItemRequests = getGroupedUnsatisfiableMixedItemRequests(
+      itemRequests,
+      simpleItemRequests,
+      satisfiableMixedRequests,
     )
-    update(
-      productionsToUpdate.map((updateTracker) => updateTracker.recipeProduction),
-      itemStorage,
-      minRemainingTimeDelta,
-      debug,
-    )
-    // Note: It is likely that some productions will not be updated (either by not receiving ingredients or not being
-    // able to store the results). This is fine, it's just another case when a production can be stalled.
-    for (const updateTracker of productionsToUpdate) {
-      updateTracker.remainingTimeDelta -= minRemainingTimeDelta
+    for (const productionGroup of groupedUnsatisfiableMixedItemRequests) {
+      processUnsatisfiableMixedItemRequestsGroup(productionGroup, itemStorage, timeDelta, debug)
     }
-    productionsToUpdate = productionsToUpdate.filter(({recipeProduction, remainingTimeDelta}) => (
-      remainingTimeDelta ||
-      recipeProduction.productionProgress === recipeProduction.recipe.productionDuration
-    ))
+
+    updateProductions(productions, itemStorage)
+    const outputStalledProductions = productions.filter(
+      production => production.productionProgress === production.recipe.productionDuration,
+    )
+    updateProductions(outputStalledProductions, itemStorage)
   }
 
-  // Give output-stalled productions one last chance to store their outputs
-  updateProductions(productionsToUpdate, itemStorage)
+  return timeDelta - timeToSimulate
 }
 
-function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[], itemStorage: ItemStorage<I>): void {
-  for (const productionUpdate of updateTrackers) {
-    const recipeDuration = productionUpdate.recipeProduction.recipe.productionDuration
-    const timeToCompletion = recipeDuration - productionUpdate.recipeProduction.productionProgress
+function updateProductions<I>(productions: readonly RecipeProduction<I>[], itemStorage: ItemStorage<I>): void {
+  for (const production of productions) {
+    if (!production.activeProducers) {
+      continue
+    }
 
-    const timeDeltaToApply = Math.min(productionUpdate.remainingTimeDelta, timeToCompletion)
-    productionUpdate.recipeProduction.productionProgress += timeDeltaToApply
-    productionUpdate.remainingTimeDelta -= timeDeltaToApply
+    const recipeDuration = production.recipe.productionDuration
+    const timeToCompletion = recipeDuration - production.productionProgress
 
-    if (productionUpdate.recipeProduction.productionProgress === recipeDuration) {
-      const productionResults = productionUpdate.recipeProduction.recipe.result
+    const timeDeltaToApply = Math.min(timeToCompletion, SIMULATION_STEP_DURATION)
+    production.productionProgress += timeDeltaToApply
+
+    if (production.productionProgress === recipeDuration) {
+      const productionResults = production.recipe.result
       const producersToDepositResults = Math.min(
-        productionUpdate.recipeProduction.activeProducers,
+        production.activeProducers,
         ...productionResults.map(
           ({item, amount}) => Math.floor(itemStorage.getFreeCapacity(item) / amount),
         ),
@@ -134,9 +106,9 @@ function updateProductions<I>(updateTrackers: RecipeProductionUpdateTracker<I>[]
         for (const {item, amount} of productionResults) {
           itemStorage.deposit(item, amount * producersToDepositResults)
         }
-        productionUpdate.recipeProduction.activeProducers -= producersToDepositResults
-        if (!productionUpdate.recipeProduction.activeProducers) {
-          productionUpdate.recipeProduction.productionProgress = 0
+        production.activeProducers -= producersToDepositResults
+        if (!production.activeProducers) {
+          production.productionProgress = 0
         }
       }
     }
@@ -177,8 +149,8 @@ function processSimpleItemRequests<I>(
     }
 
     const [{production, requestedAmount, requestedProducers}] = productions
-    const availableAmount = itemStorage.withdraw(item, requestedAmount)
     if (debug) {
+      const availableAmount = itemStorage.withdraw(item, requestedAmount)
       if (availableAmount !== requestedAmount) {
         throw new Error(
           `Encountered an incosistency in simple item request. Prepared a request requesting ${requestedAmount} ` +
