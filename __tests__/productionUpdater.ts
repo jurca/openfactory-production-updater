@@ -107,6 +107,14 @@ describe('production updater', () => {
     )
   })
 
+  // TODO: one production completes and stored items enable other items to produce within the time delta
+
+  // TODO: simple items requests
+
+  // TODO: mixed item requests
+
+  // TODO: unsatisfiable mixed item requests
+
   function runProductionUpdate(timeDelta: number): void {
     updateProduction([...productions.values()], storage, timeDelta, true)
   }
